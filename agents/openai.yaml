@@ -1,0 +1,7 @@
+interface:
+  display_name: "Image Generation API"
+  short_description: "Generate with GPT Image or Grok via a configured API."
+  default_prompt: "Use $image-generation-api through the configured API. After API setup, run configure once to fetch /v1/models and persist the numbered GPT/Grok catalog. For later generate/edit/responses calls, map a number supplied with the request, or the next standalone numeric reply for a pending image request, directly to --choice N; continue without another vendor/model prompt and never perform hidden model discovery. If no number or explicit model is given, use gpt-image-2. Keep the catalog bound to its Base URL, never store or print the API key, treat other vendors as discovery-only, and never auto-fallback across models or vendors."
+
+policy:
+  allow_implicit_invocation: true
