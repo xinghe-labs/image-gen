@@ -1,6 +1,6 @@
 ---
 name: image-generation-api
-description: Use when the user wants to create, edit, or iterate on images from a text prompt - covers, illustrations, posters, character art, photoreal scenes, any "画一张/生成图" request. Polishes the user's idea into a structured image prompt, confirms once, then generates through a configured OpenAI-compatible gateway using GPT Image or Grok models via a provider-aware CLI with a numbered model catalog. Also covers reference-image edits, masks, Responses image_generation flows, and reproducing past generations from sidecar records.
+description: Use when the user wants to create, edit, or iterate on images from a text prompt - covers, illustrations, posters, character art, avatars, logos-as-concepts, photoreal scenes, text-to-image, any "画一张/生成图/配图/文生图" request. Polishes the user's idea into a structured image prompt, confirms once, then generates through a configured OpenAI-compatible gateway using GPT Image or Grok models via a provider-aware CLI with a numbered model catalog. Also covers reference-image edits, masks, Responses image_generation flows, and reproducing past generations from sidecar records.
 ---
 
 # Image Generation API
