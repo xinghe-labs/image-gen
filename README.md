@@ -36,7 +36,7 @@ npx skills add xinghe-labs/image-generation-api -g --copy -y    # non-interactiv
 
 ### No-Node fallback
 
-From a clone or an extracted release archive, with Python 3.10+ (standard library only):
+From a clone or an extracted release archive, with Python 3.10+:
 
 ```bash
 python install.py              # first detected skill root (~/.agents/skills, ~/.codex/skills, ~/.claude/skills)
@@ -44,7 +44,7 @@ python install.py --root "<other-skill-root>"   # explicit target
 python install.py --all        # every detected skill root
 ```
 
-The installer refuses to replace a foreign directory unless `--force` is passed. To update an install, `git pull` in the clone and re-run the command.
+The installer refuses to replace a foreign directory unless `--force` is passed. To update an install, `git pull` in the clone and re-run the command. `install.py` itself is standard library only; the CLI optionally uses [Pillow](https://pypi.org/project/pillow/) for output dimension normalization (`python -m pip install pillow`) — without it, exact-dimension size policies degrade to a structured `image_processing_unavailable` error and `--size-policy provider` keeps working.
 
 ### Run from a clone
 

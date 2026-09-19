@@ -57,7 +57,7 @@ Ready-made keyword blocks to combine with a subject. Pick one, don't stack three
 | Cut-out sticker/asset | `transparent` | GPT Image only; Grok has no transparent background |
 | Quick draft to probe an idea | `fast` | probe cheap, finalize expensive |
 
-Exact dimensions requested by the user: pass `--size` (GPT Image, e.g. `1536x1024`) or `--aspect-ratio`/`--resolution` (Grok, e.g. `16:9` `2k`) directly; they override the preset.
+Exact dimensions requested by the user: pass `--size` (GPT Image, e.g. `1536x1024`) or `--aspect-ratio`/`--resolution` (Grok, e.g. `16:9` `2k`) directly; they override the preset. Grok caveat: some gateways ignore `aspect_ratio` and return the model's native shape — treat Grok dimensions as advisory, and use `--size-policy provider` when the native shape is acceptable.
 
 ## Converting vague feedback into prompt deltas
 

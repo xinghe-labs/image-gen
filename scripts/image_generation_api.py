@@ -2169,7 +2169,8 @@ def normalize_image_bytes(
                     if not aspect_ratios_match(provider_size, expected):
                         raise OutputProcessingError(
                             "output_aspect_ratio_mismatch",
-                            "The provider returned a different aspect ratio; automatic stretching or cropping was refused.",
+                            "The provider returned a different aspect ratio; automatic stretching or cropping was refused. "
+                            "If the provider's native shape is acceptable, rerun with --size-policy provider to save it unmodified.",
                             details,
                         )
                     resampling = getattr(Image, "Resampling", Image).LANCZOS

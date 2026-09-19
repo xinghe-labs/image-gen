@@ -66,6 +66,8 @@ Presets (flags override preset fields):
 
 Model aliases: `gpt2`/`gpt2.5`/`gpt4k`, `grok`/`grok2`/`grok-quality`. Catalog numbers (`--choice N`) stay stable until the next `configure`; with no `--choice` and no `--model`, the default is `gpt-image-2`.
 
+Grok caveat: some gateways ignore `aspect_ratio` and return the model's native shape (e.g. 2:3 for a 1:1 request). The CLI refuses to stretch it — on `output_aspect_ratio_mismatch`, rerun with `--size-policy provider` to save the image as returned (the sidecar records the deviation).
+
 Other commands: `configure` (refresh catalog after changing gateway), `models --image-only` (live inventory), `select-model` (print/resolve catalog), `capabilities`, `options`, `doctor`. Run `python scripts/image_generation_api.py <command> --help` for the full flag list of any command.
 
 ## Edits and Responses flows
