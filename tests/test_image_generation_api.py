@@ -2297,6 +2297,12 @@ class GptImageApiCliTest(unittest.TestCase):
             self.assertIn("non-executable model", result.stderr)
             self.assertEqual(server.requests_seen, [])
 
+    def test_version_flag_prints_script_version(self) -> None:
+        result = self.run_cli("--version")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("image-generation-api 1.0.0", result.stdout)
+
     def test_non_image_api_helper_commands_are_not_part_of_skill(self) -> None:
         for command in ("outline", "analyze-copy", "compose-slide"):
             result = self.run_cli(command)

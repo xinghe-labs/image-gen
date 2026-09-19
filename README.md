@@ -1,5 +1,7 @@
 # image-generation-api
 
+[![CI](https://github.com/xinghe-labs/image-generation-api/actions/workflows/ci.yml/badge.svg)](https://github.com/xinghe-labs/image-generation-api/actions/workflows/ci.yml)
+
 A prompt-to-image **agent skill**: you describe the picture you want, the agent polishes your idea into a structured prompt, confirms the plan once, and runs a provider-aware CLI to deliver the file. Under the hood it calls **GPT Image** and **xAI/Grok Image** models through any OpenAI-compatible or third-party gateway. Configure the API once, persist a deterministic numbered catalog, then select a model with one number. Only `gpt-image-*` and `grok-imagine-image*` enter the executable catalog or image requests.
 
 Works with any agent that reads the [Agent Skills](https://agentskills.io) format (Codex, Claude Code, ZCode, Cursor, ...).

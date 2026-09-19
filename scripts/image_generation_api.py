@@ -41,6 +41,7 @@ DEFAULT_PROVIDER_PROFILE = "auto"
 DEFAULT_ROUTING_MODE = "auto"
 DEFAULT_TOOL_MODEL_POLICY = "auto"
 MODEL_CATALOG_SCHEMA_VERSION = 1
+SCRIPT_VERSION = "1.0.0"
 MODEL_CATALOG_FILENAME = "image-generation-api-model-catalog.json"
 # Short, human-friendly references are accepted at the command boundary and
 # always resolved to an auditable provider model id before a request is built.
@@ -3927,6 +3928,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Discover image models and generate or edit with GPT Image and Grok Image adapters."
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"image-generation-api {SCRIPT_VERSION}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
