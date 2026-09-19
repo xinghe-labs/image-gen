@@ -14,16 +14,16 @@ from unittest import mock
 from pathlib import Path
 
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "image_generation_api.py"
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "image_gen.py"
 ONE_PIXEL_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
 )
 
 
 def load_script_module():
-    spec = importlib.util.spec_from_file_location("image_generation_api_under_test", SCRIPT_PATH)
+    spec = importlib.util.spec_from_file_location("image_gen_under_test", SCRIPT_PATH)
     if spec is None or spec.loader is None:
-        raise RuntimeError("Unable to load image_generation_api.py")
+        raise RuntimeError("Unable to load image_gen.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -2301,7 +2301,7 @@ class GptImageApiCliTest(unittest.TestCase):
         result = self.run_cli("--version")
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("image-generation-api 1.0.0", result.stdout)
+        self.assertIn("image-gen 1.0.0", result.stdout)
 
     def test_non_image_api_helper_commands_are_not_part_of_skill(self) -> None:
         for command in ("outline", "analyze-copy", "compose-slide"):

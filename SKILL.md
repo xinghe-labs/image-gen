@@ -1,9 +1,9 @@
 ---
-name: image-generation-api
+name: image-gen
 description: Use when the user wants to create, edit, or iterate on images from a text prompt - covers, illustrations, posters, character art, avatars, logos-as-concepts, photoreal scenes, text-to-image, any "画一张/生成图/配图/文生图" request. Polishes the user's idea into a structured image prompt, confirms once, then generates through a configured OpenAI-compatible gateway using GPT Image or Grok models via a provider-aware CLI with a numbered model catalog. Also covers reference-image edits, masks, Responses image_generation flows, and reproducing past generations from sidecar records.
 ---
 
-# Image Generation API
+# image-gen
 
 A prompt-to-image skill for agents. The Python CLI in `scripts/` is the engine; you are the photographer's art director: polish the idea, lock the plan, run one command, deliver the file. Every successful generation writes a `.json` sidecar next to the image recording the exact prompt and parameters, so any past image can be understood and reproduced.
 
@@ -32,7 +32,7 @@ Skip the confirmation only when the user said "直接出图 / just generate / do
 ### Step 3 — Generate
 
 ```bash
-python scripts/image_generation_api.py generate \
+python scripts/image_gen.py generate \
   --prompt "<final English prompt>" \
   --preset quality \
   --output "output/imagegen/2026-09-19-hero.png"
@@ -68,7 +68,7 @@ Model aliases: `gpt2`/`gpt2.5`/`gpt4k`, `grok`/`grok2`/`grok-quality`. Catalog n
 
 Grok caveat: some gateways ignore `aspect_ratio` and return the model's native shape (e.g. 2:3 for a 1:1 request). The CLI refuses to stretch it — on `output_aspect_ratio_mismatch`, rerun with `--size-policy provider` to save the image as returned (the sidecar records the deviation).
 
-Other commands: `configure` (refresh catalog after changing gateway), `models --image-only` (live inventory), `select-model` (print/resolve catalog), `capabilities`, `options`, `doctor`. Run `python scripts/image_generation_api.py <command> --help` for the full flag list of any command.
+Other commands: `configure` (refresh catalog after changing gateway), `models --image-only` (live inventory), `select-model` (print/resolve catalog), `capabilities`, `options`, `doctor`. Run `python scripts/image_gen.py <command> --help` for the full flag list of any command.
 
 ## Edits and Responses flows
 

@@ -2,17 +2,17 @@
 
 ## Project Structure & Module Organization
 
-This repository contains an agent skill (Agent Skills format, usable by Codex, Claude Code, ZCode, and similar agents) for prompt-to-image generation through third-party APIs. `SKILL.md` is the skill entry point: it defines the polish → confirm → generate → deliver workflow and must stay lean, pushing detail into `references/`. `references/prompt-craft.md` is the prompt-polishing handbook; `references/api-surface.md`, `references/provider-routing.md`, and `references/errors.md` carry provider behavior and command contracts — keep conditional details there instead of expanding `SKILL.md`. `scripts/image_generation_api.py` implements the CLI; every successful paid call writes a sidecar JSON record next to the output image (prompt, model, parameters, SHA-256), disabled with `--no-sidecar`. `install.py` is the no-Node installer; `agents/openai.yaml` defines the Codex UI metadata and implicit invocation policy. Tests are in `tests/test_image_generation_api.py` and use a local fake HTTP server, so they must not contact paid image endpoints.
+This repository contains an agent skill (Agent Skills format, usable by Codex, Claude Code, ZCode, and similar agents) for prompt-to-image generation through third-party APIs. `SKILL.md` is the skill entry point: it defines the polish → confirm → generate → deliver workflow and must stay lean, pushing detail into `references/`. `references/prompt-craft.md` is the prompt-polishing handbook; `references/api-surface.md`, `references/provider-routing.md`, and `references/errors.md` carry provider behavior and command contracts — keep conditional details there instead of expanding `SKILL.md`. `scripts/image_gen.py` implements the CLI; every successful paid call writes a sidecar JSON record next to the output image (prompt, model, parameters, SHA-256), disabled with `--no-sidecar`. `install.py` is the no-Node installer; `agents/openai.yaml` defines the Codex UI metadata and implicit invocation policy. Tests are in `tests/test_image_gen.py` and use a local fake HTTP server, so they must not contact paid image endpoints.
 
 ## Build, Test, and Development Commands
 
 Run these commands from the repository root on Windows PowerShell:
 
 ```powershell
-python -m py_compile .\scripts\image_generation_api.py
+python -m py_compile .\scripts\image_gen.py
 python -m unittest discover -s .\tests -p "test_*.py"
 python <skill-creator-root>\scripts\quick_validate.py .
-python .\scripts\image_generation_api.py generate --prompt "smoke test" --dry-run
+python .\scripts\image_gen.py generate --prompt "smoke test" --dry-run
 ```
 
 The first command checks syntax, the second runs the full offline suite, and `quick_validate.py` checks skill metadata and structure. Use `--dry-run` to inspect request construction without generating or charging for an image.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Install the image-generation-api skill into an agent-host skill directory.
+"""Install the image-gen skill into an agent-host skill directory.
 
 This is a human-facing helper for machines without Node (the standard route
-is ``npx skills add xinghe-labs/image-generation-api``). Standard library
+is ``npx skills add xinghe-labs/image-gen``). Standard library
 only; run it from a clone or an extracted release archive of this
 repository.
 
@@ -23,7 +23,7 @@ import shutil
 import sys
 from pathlib import Path
 
-SKILL_NAME = "image-generation-api"
+SKILL_NAME = "image-gen"
 
 KNOWN_SKILL_ROOTS = [
     Path.home() / ".agents" / "skills",
@@ -116,7 +116,7 @@ def install_into(source_root: Path, target_root: Path, force: bool) -> None:
 
 def main() -> int:
     configure_utf8_streams()
-    parser = argparse.ArgumentParser(description="Install the image-generation-api skill.")
+    parser = argparse.ArgumentParser(description="Install the image-gen skill.")
     parser.add_argument("--root", help="Install into this directory instead of the detected skill roots.")
     parser.add_argument("--all", action="store_true", help="Install into every detected skill root.")
     parser.add_argument("--force", action="store_true", help="Replace an existing directory even if it is not this skill.")

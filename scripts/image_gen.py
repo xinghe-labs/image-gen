@@ -1989,7 +1989,7 @@ def resolve_catalog_choice(config: dict[str, Any], choice: str, operation: str) 
     catalog = load_model_catalog(config)
     if catalog is None:
         raise SystemExit(
-            "No global model catalog found. Run `image_generation_api.py configure` once, "
+            "No global model catalog found. Run `image_gen.py configure` once, "
             "then use --choice N."
         )
     choices = catalog.get("choices", [])
@@ -3573,7 +3573,7 @@ def cmd_select_model(args: argparse.Namespace) -> int:
         if catalog is None:
             result["error"] = {
                 "category": "model_catalog_missing",
-                "summary": "No model catalog found. Run `image_generation_api.py configure` once first.",
+                "summary": "No model catalog found. Run `image_gen.py configure` once first.",
             }
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 1
@@ -3933,7 +3933,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"image-generation-api {SCRIPT_VERSION}",
+        version=f"image-gen {SCRIPT_VERSION}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

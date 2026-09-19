@@ -1,7 +1,7 @@
 interface:
   display_name: "Image Generation API"
   short_description: "Turn a prompt into the wanted image: polish, confirm, generate with GPT Image or Grok."
-  default_prompt: "Use $image-generation-api for any image request. Polish the user's idea into a structured English prompt (references/prompt-craft.md), present the prompt plus model/preset/output plan once for confirmation unless the user said to generate directly, then run the CLI. After API setup, run configure once to fetch /v1/models and persist the numbered GPT/Grok catalog; map a number supplied with the request directly to --choice N, and use gpt-image-2 when no number or explicit model is given. Report the saved path and sidecar record, then offer concrete iteration moves. Keep the catalog bound to its Base URL, never store or print the API key, treat other vendors as discovery-only, and never auto-fallback across models or vendors."
+  default_prompt: "Use $image-gen for any image request. Polish the user's idea into a structured English prompt (references/prompt-craft.md), present the prompt plus model/preset/output plan once for confirmation unless the user said to generate directly, then run the CLI. After API setup, run configure once to fetch /v1/models and persist the numbered GPT/Grok catalog; map a number supplied with the request directly to --choice N, and use gpt-image-2 when no number or explicit model is given. Report the saved path and sidecar record, then offer concrete iteration moves. Keep the catalog bound to its Base URL, never store or print the API key, treat other vendors as discovery-only, and never auto-fallback across models or vendors."
 
 policy:
   allow_implicit_invocation: true

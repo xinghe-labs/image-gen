@@ -1,6 +1,6 @@
-# image-generation-api
+# image-gen
 
-[![CI](https://github.com/xinghe-labs/image-generation-api/actions/workflows/ci.yml/badge.svg)](https://github.com/xinghe-labs/image-generation-api/actions/workflows/ci.yml)
+[![CI](https://github.com/xinghe-labs/image-gen/actions/workflows/ci.yml/badge.svg)](https://github.com/xinghe-labs/image-gen/actions/workflows/ci.yml)
 
 A prompt-to-image **agent skill**: you describe the picture you want, the agent polishes your idea into a structured prompt, confirms the plan once, and runs a provider-aware CLI to deliver the file. Under the hood it calls **GPT Image** and **xAI/Grok Image** models through any OpenAI-compatible or third-party gateway. Configure the API once, persist a deterministic numbered catalog, then select a model with one number. Only `gpt-image-*` and `grok-imagine-image*` enter the executable catalog or image requests.
 
@@ -30,8 +30,8 @@ Agent: saved output/imagegen/2026-09-19-convenience-store.png (+ .json sidecar)
 Detects the agents installed on the machine and installs the skill where each one looks for it:
 
 ```bash
-npx skills add xinghe-labs/image-generation-api                 # interactive: pick agents
-npx skills add xinghe-labs/image-generation-api -g --copy -y    # non-interactive: user-level, copy
+npx skills add xinghe-labs/image-gen                 # interactive: pick agents
+npx skills add xinghe-labs/image-gen -g --copy -y    # non-interactive: user-level, copy
 ```
 
 ### No-Node fallback
@@ -49,9 +49,9 @@ The installer refuses to replace a foreign directory unless `--force` is passed.
 ### Run from a clone
 
 ```bash
-git clone https://github.com/xinghe-labs/image-generation-api.git
-cd image-generation-api
-python scripts/image_generation_api.py --help
+git clone https://github.com/xinghe-labs/image-gen.git
+cd image-gen
+python scripts/image_gen.py --help
 ```
 
 ## Configuration
@@ -75,9 +75,9 @@ IMAGE_GENERATION_ROUTING_MODE=auto
 ## Model catalog and --choice
 
 ```bash
-python scripts/image_generation_api.py configure     # one read-only GET /v1/models → numbered catalog
-python scripts/image_generation_api.py select-model  # print the persisted catalog (offline)
-python scripts/image_generation_api.py models --image-only  # live inventory, no generation
+python scripts/image_gen.py configure     # one read-only GET /v1/models → numbered catalog
+python scripts/image_gen.py select-model  # print the persisted catalog (offline)
+python scripts/image_gen.py models --image-only  # live inventory, no generation
 ```
 
 - `configure` is the only command that refreshes the inventory; numbers stay stable until the next `configure`, and the catalog is bound to its Base URL.
@@ -91,19 +91,19 @@ python scripts/image_generation_api.py models --image-only  # live inventory, no
 
 ```bash
 # Text-to-image (the default flow; --choice N selects a catalog model)
-python scripts/image_generation_api.py generate \
+python scripts/image_gen.py generate \
   --prompt "A lone convenience store glowing on a rain-soaked street" \
   --preset quality \
   --output output/imagegen/2026-09-19-store.png
 
 # Reference-image edit (Grok takes 1-3 references; masks are GPT Image only)
-python scripts/image_generation_api.py edit \
+python scripts/image_gen.py edit \
   --prompt "Replace the background with a clean studio scene" \
   --image refs/product.png --mask refs/mask.png \
   --choice 1 --output output/imagegen/edited.png
 
 # Responses flow: a text model drives the image_generation tool
-python scripts/image_generation_api.py responses \
+python scripts/image_gen.py responses \
   --input-text "Create a campaign poster from this product" \
   --input-image refs/product.png \
   --model gpt-5.4 --tool-model gpt-image-2 \
@@ -130,7 +130,7 @@ See [`references/api-surface.md`](references/api-surface.md) for command contrac
 ## Validation
 
 ```bash
-python -m py_compile scripts/image_generation_api.py
+python -m py_compile scripts/image_gen.py
 python -m unittest discover -s tests -p "test_*.py"
 python <skill-creator-root>/scripts/quick_validate.py .
 ```

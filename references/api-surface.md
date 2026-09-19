@@ -1,6 +1,6 @@
 # API Surface
 
-The public entrypoint is `scripts/image_generation_api.py`.
+The public entrypoint is `scripts/image_gen.py`.
 
 ## Read-only commands
 
