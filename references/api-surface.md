@@ -8,7 +8,7 @@ The public entrypoint is `scripts/image_gen.py`.
 
 `capabilities` prints the built-in registry. It always includes `gpt-image-2` and does not contact a provider.
 
-`configure` is the one-time inventory command. It calls `GET /v1/models` exactly once, accepts common `data`, `models`, and `items` list wrappers, filters to executable GPT/Grok image models, assigns deterministic numbers, and atomically writes `image-generation-api-model-catalog.json` (or `--catalog`). The file contains no API key and records the Base URL it belongs to. `gpt-image-2` is inserted as a built-in default when the gateway omits it, with `listed=false`.
+`configure` is the one-time inventory command. It calls `GET /v1/models` exactly once, accepts common `data`, `models`, and `items` list wrappers, filters to executable GPT/Grok image models, assigns deterministic numbers, and atomically writes `image-gen-model-catalog.json` (or `--catalog`). The file contains no API key and records the Base URL it belongs to. `gpt-image-2` is inserted as a built-in default when the gateway omits it, with `listed=false`.
 
 `models` remains a live read-only diagnostic call. It reports all recognized image candidates and distinguishes executable GPT/Grok records from `discovered_not_enabled` records. If the list contains another image model but omits `gpt-image-2`, the result is successful with a warning.
 

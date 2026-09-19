@@ -42,7 +42,7 @@ DEFAULT_ROUTING_MODE = "auto"
 DEFAULT_TOOL_MODEL_POLICY = "auto"
 MODEL_CATALOG_SCHEMA_VERSION = 1
 SCRIPT_VERSION = "1.0.0"
-MODEL_CATALOG_FILENAME = "image-generation-api-model-catalog.json"
+MODEL_CATALOG_FILENAME = "image-gen-model-catalog.json"
 # Short, human-friendly references are accepted at the command boundary and
 # always resolved to an auditable provider model id before a request is built.
 # Keep this map deliberately small: it is a convenience layer, not a second
@@ -2420,7 +2420,7 @@ def post_json_stream(
 
 
 def encode_multipart(fields: dict[str, Any], files: list[tuple[str, Path]]) -> tuple[str, bytes]:
-    boundary = f"----image-generation-api-{uuid.uuid4().hex}"
+    boundary = f"----image-gen-{uuid.uuid4().hex}"
     chunks: list[bytes] = []
     for name, value in fields.items():
         if value in (None, ""):
@@ -3946,7 +3946,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     generate.add_argument("--user-agent", help="HTTP User-Agent. Overrides IMAGE_GENERATION_USER_AGENT or GPT_IMAGE_USER_AGENT.")
     generate.add_argument("--model", help="Exact provider model id or a supported shorthand alias.")
     generate.add_argument("--choice", help="Resolve a persisted catalog choice by number, exact id, or alias.")
-    generate.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-generation-api-model-catalog.json.")
+    generate.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-gen-model-catalog.json.")
     generate.add_argument("--vendor", help="Vendor id/name used to filter the persisted catalog.")
     generate.add_argument("--provider-profile", choices=PROVIDER_PROFILE_VALUES)
     generate.add_argument("--mode", choices=ROUTING_MODE_VALUES)
@@ -3995,7 +3995,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     edit.add_argument("--user-agent", help="HTTP User-Agent. Overrides IMAGE_GENERATION_USER_AGENT or GPT_IMAGE_USER_AGENT.")
     edit.add_argument("--model", help="Exact provider model id or a supported shorthand alias.")
     edit.add_argument("--choice", help="Resolve a persisted catalog choice by number, exact id, or alias.")
-    edit.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-generation-api-model-catalog.json.")
+    edit.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-gen-model-catalog.json.")
     edit.add_argument("--vendor", help="Vendor id/name used to filter the persisted catalog.")
     edit.add_argument("--provider-profile", choices=PROVIDER_PROFILE_VALUES)
     edit.add_argument("--mode", choices=ROUTING_MODE_VALUES)
@@ -4045,7 +4045,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     responses.add_argument("--model", dest="responses_model", help="Top-level text-capable Responses model.")
     responses.add_argument("--tool-model", help="Image model inside the image_generation tool.")
     responses.add_argument("--choice", help="Resolve a persisted catalog choice by number, exact id, or alias.")
-    responses.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-generation-api-model-catalog.json.")
+    responses.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-gen-model-catalog.json.")
     responses.add_argument("--vendor", help="Vendor id/name used to filter the persisted catalog.")
     responses.add_argument("--tool-model-policy", choices=TOOL_MODEL_POLICY_VALUES)
     responses.add_argument("--provider-profile", choices=PROVIDER_PROFILE_VALUES)
@@ -4094,7 +4094,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     configure.add_argument("--user-agent", help="HTTP User-Agent. Overrides IMAGE_GENERATION_USER_AGENT or GPT_IMAGE_USER_AGENT.")
     configure.add_argument("--env-file")
     configure.add_argument("--timeout", type=int)
-    configure.add_argument("--catalog", help="Output model catalog path. Defaults to %USERPROFILE%\\.codex\\image-generation-api-model-catalog.json.")
+    configure.add_argument("--catalog", help="Output model catalog path. Defaults to %USERPROFILE%\\.codex\\image-gen-model-catalog.json.")
 
     classify = subparsers.add_parser("classify-error", help="Classify a saved HTTP error.")
     classify.add_argument("--status", required=True)
@@ -4129,7 +4129,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     select_model.add_argument("--api-key")
     select_model.add_argument("--base-url")
-    select_model.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-generation-api-model-catalog.json.")
+    select_model.add_argument("--catalog", help="Model catalog path. Defaults to %USERPROFILE%\\.codex\\image-gen-model-catalog.json.")
     select_model.add_argument("--user-agent", help="HTTP User-Agent. Overrides IMAGE_GENERATION_USER_AGENT or GPT_IMAGE_USER_AGENT.")
     select_model.add_argument("--model", help="Explicit provider model id or supported shorthand alias.")
     select_model.add_argument("--choice", help="Select one catalog entry by number, exact id, or alias.")

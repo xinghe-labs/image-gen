@@ -59,7 +59,7 @@ python scripts/image_gen.py --help
 ```dotenv
 IMAGE_GENERATION_API_KEY=your-third-party-key
 IMAGE_GENERATION_BASE_URL=https://your-provider.example/v1
-IMAGE_GENERATION_MODEL_CATALOG=~/.codex/image-generation-api-model-catalog.json
+IMAGE_GENERATION_MODEL_CATALOG=~/.codex/image-gen-model-catalog.json
 IMAGE_GENERATION_RESPONSES_MODEL=gpt-5.4
 IMAGE_GENERATION_TOOL_MODEL=gpt-image-2
 IMAGE_GENERATION_TIMEOUT=180

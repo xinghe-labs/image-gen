@@ -7,7 +7,7 @@ description: Use when the user wants to create, edit, or iterate on images from 
 
 A prompt-to-image skill for agents. The Python CLI in `scripts/` is the engine; you are the photographer's art director: polish the idea, lock the plan, run one command, deliver the file. Every successful generation writes a `.json` sidecar next to the image recording the exact prompt and parameters, so any past image can be understood and reproduced.
 
-Prerequisites: `IMAGE_GENERATION_API_KEY` and `IMAGE_GENERATION_BASE_URL` (an HTTP(S) URL ending in `/v1`) configured in the environment or `.env`. If a call fails with missing-credential errors, show the user the exact variable names to set — never ask them to paste a key into chat. Run `configure` once per gateway to snapshot the model catalog; the catalog path defaults to `%USERPROFILE%\.codex\image-generation-api-model-catalog.json`.
+Prerequisites: `IMAGE_GENERATION_API_KEY` and `IMAGE_GENERATION_BASE_URL` (an HTTP(S) URL ending in `/v1`) configured in the environment or `.env`. If a call fails with missing-credential errors, show the user the exact variable names to set — never ask them to paste a key into chat. Run `configure` once per gateway to snapshot the model catalog; the catalog path defaults to `%USERPROFILE%\.codex\image-gen-model-catalog.json`.
 
 ## The core workflow
 
