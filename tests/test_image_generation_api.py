@@ -2303,6 +2303,101 @@ class GptImageApiCliTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("invalid choice", result.stderr)
 
+    def test_generate_writes_sidecar_reproducibility_record(self) -> None:
+        response = {"data": [{"b64_json": ONE_PIXEL_PNG_B64}]}
+        with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(200, response)], model_list=["gpt-image-2"]) as server:
+            output_path = Path(tmpdir) / "hero.png"
+            result = self.run_cli(
+                "generate",
+                "--prompt",
+                "a lone convenience store on a rain-soaked street",
+                "--base-url",
+                server.base_url,
+                "--api-key",
+                "provider-secret-sidecar-1",
+                "--preset",
+                "quality",
+                "--output",
+                str(output_path),
+                cwd=tmpdir,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(len(payload["sidecars"]), 1)
+            sidecar_path = Path(payload["sidecars"][0])
+            self.assertTrue(sidecar_path.is_file())
+            self.assertEqual(sidecar_path.name, "hero.png.json")
+            record = json.loads(sidecar_path.read_text(encoding="utf-8"))
+            self.assertEqual(record["record_type"], "image-generation-sidecar")
+            self.assertEqual(record["command"], "generate")
+            self.assertEqual(record["model"], "gpt-image-2")
+            self.assertEqual(record["prompt"], "a lone convenience store on a rain-soaked street")
+            self.assertEqual(record["base_url"], server.base_url)
+            self.assertEqual(record["parameters"]["preset"], "quality")
+            self.assertEqual(record["output"]["path"], str(output_path.resolve()))
+            self.assertEqual(record["output"]["bytes"], output_path.stat().st_size)
+            self.assertEqual(len(record["output"]["sha256"]), 64)
+            self.assertNotIn("provider-secret-sidecar-1", sidecar_path.read_text(encoding="utf-8"))
+
+    def test_generate_no_sidecar_flag_skips_record(self) -> None:
+        response = {"data": [{"b64_json": ONE_PIXEL_PNG_B64}]}
+        with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(200, response)], model_list=["gpt-image-2"]) as server:
+            output_path = Path(tmpdir) / "hero.png"
+            result = self.run_cli(
+                "generate",
+                "--prompt",
+                "no ledger please",
+                "--base-url",
+                server.base_url,
+                "--api-key",
+                "provider-secret-sidecar-2",
+                "--no-sidecar",
+                "--output",
+                str(output_path),
+                cwd=tmpdir,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["sidecars"], [])
+            self.assertTrue(output_path.is_file())
+            self.assertFalse(output_path.with_name("hero.png.json").exists())
+
+    def test_generate_sidecar_records_catalog_choice(self) -> None:
+        response = {"data": [{"b64_json": ONE_PIXEL_PNG_B64}]}
+        model_list = ["gpt-image-2", "grok-imagine-image"]
+        with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(200, response)], model_list=model_list) as server:
+            workdir = Path(tmpdir)
+            catalog_path = workdir / "catalog.json"
+            configured = self.configure_catalog(server, catalog_path)
+            self.assertEqual(configured.returncode, 0, configured.stderr)
+            output_path = workdir / "chosen.png"
+            result = self.run_cli(
+                "generate",
+                "--prompt",
+                "catalog choice record",
+                "--choice",
+                "2",
+                "--base-url",
+                server.base_url,
+                "--catalog",
+                str(catalog_path),
+                "--api-key",
+                "provider-secret-sidecar-3",
+                "--output",
+                str(output_path),
+                cwd=tmpdir,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            sidecar_path = Path(payload["sidecars"][0])
+            record = json.loads(sidecar_path.read_text(encoding="utf-8"))
+            self.assertEqual(record["model"], "grok-imagine-image")
+            self.assertEqual(record["choice"], "2")
+            self.assertNotIn("provider-secret-sidecar-3", sidecar_path.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository contains a Codex skill for provider-aware image generation through third-party APIs. `SKILL.md` is the skill entry point and must keep the invocation rules concise. `scripts/image_generation_api.py` implements the CLI. Provider behavior and command contracts live in `references/`; keep conditional details there instead of expanding `SKILL.md`. `agents/openai.yaml` defines the Codex UI metadata and implicit invocation policy. Tests are in `tests/test_image_generation_api.py` and use a local fake HTTP server, so they must not contact paid image endpoints.
+This repository contains an agent skill (Agent Skills format, usable by Codex, Claude Code, ZCode, and similar agents) for prompt-to-image generation through third-party APIs. `SKILL.md` is the skill entry point: it defines the polish → confirm → generate → deliver workflow and must stay lean, pushing detail into `references/`. `references/prompt-craft.md` is the prompt-polishing handbook; `references/api-surface.md`, `references/provider-routing.md`, and `references/errors.md` carry provider behavior and command contracts — keep conditional details there instead of expanding `SKILL.md`. `scripts/image_generation_api.py` implements the CLI; every successful paid call writes a sidecar JSON record next to the output image (prompt, model, parameters, SHA-256), disabled with `--no-sidecar`. `install.py` is the no-Node installer; `agents/openai.yaml` defines the Codex UI metadata and implicit invocation policy. Tests are in `tests/test_image_generation_api.py` and use a local fake HTTP server, so they must not contact paid image endpoints.
 
 ## Build, Test, and Development Commands
 
@@ -23,7 +23,7 @@ Use Python 3 type hints, four-space indentation, `snake_case` for functions and 
 
 ## Testing Guidelines
 
-Use `unittest`; name tests `test_<behavior>`. Cover request shape, invalid combinations, catalog ordering, redaction, Base URL binding, and offline model selection. Network-facing tests must use `FakeImageServer`. A model listed by `/v1/models` is discovery evidence only, not proof of generation support.
+Use `unittest`; name tests `test_<behavior>`. Cover request shape, invalid combinations, catalog ordering, redaction, Base URL binding, offline model selection, and sidecar record contents (including `--no-sidecar` and credential absence). Network-facing tests must use `FakeImageServer`. A model listed by `/v1/models` is discovery evidence only, not proof of generation support.
 
 ## Commit & Pull Request Guidelines
 

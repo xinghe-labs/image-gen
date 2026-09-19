@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 from io import BytesIO
 import json
 from math import gcd
@@ -2504,6 +2505,85 @@ def get_json(url: str, api_key: str, timeout: int, user_agent: str = DEFAULT_USE
         return {"status": response.status, "body": json.loads(response_body)}
 
 
+def generation_sidecar_payload(
+    args: argparse.Namespace,
+    config: dict[str, Any],
+    output_path: Path,
+    artifact: dict[str, Any],
+) -> dict[str, Any]:
+    command = getattr(args, "command", "")
+    model = config["tool_model"] if command == "responses" else config["model"]
+    parameters: dict[str, Any] = {}
+    for key in (
+        "preset",
+        "size",
+        "quality",
+        "output_format",
+        "aspect_ratio",
+        "resolution",
+        "background",
+        "n",
+        "compression",
+        "stream",
+    ):
+        value = getattr(args, key, None)
+        if value is not None and value is not False:
+            parameters[key] = value
+    prompt = getattr(args, "prompt", None)
+    if prompt is None:
+        prompt = " ".join(getattr(args, "input_text", []) or []) or None
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "record_type": "image-generation-sidecar",
+        "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "command": command,
+        "model": model,
+        "choice": getattr(args, "choice", None),
+        "base_url": config["base_url"],
+        "provider_profile": config["provider_profile"],
+        "prompt": prompt,
+        "reference_images": getattr(args, "image", None) or getattr(args, "input_image", None) or None,
+        "mask": getattr(args, "mask", None),
+        "parameters": parameters,
+        "output": {
+            "path": str(output_path.resolve()),
+            "bytes": output_path.stat().st_size,
+            "sha256": hashlib.sha256(output_path.read_bytes()).hexdigest(),
+            "final_size": artifact.get("final_size"),
+            "final_format": artifact.get("final_format"),
+        },
+    }
+    if command == "responses":
+        payload["text_model"] = config.get("responses_model")
+    return payload
+
+
+def write_generation_sidecars(
+    args: argparse.Namespace,
+    config: dict[str, Any],
+    saved: list[str],
+    artifacts: list[dict[str, Any]],
+) -> list[str]:
+    """Write one reproducibility record next to each saved local image.
+
+    The sidecar captures the exact prompt, model selection, and parameters so
+    any past generation can be understood and reproduced later. It never
+    contains credentials, and it is skipped entirely with --no-sidecar.
+    """
+    if getattr(args, "no_sidecar", False):
+        return []
+    sidecars: list[str] = []
+    for index, saved_path in enumerate(saved):
+        candidate = Path(saved_path)
+        if not candidate.is_file():
+            continue
+        artifact = artifacts[index] if index < len(artifacts) else {}
+        sidecar_path = candidate.with_name(candidate.name + ".json")
+        write_json(sidecar_path, generation_sidecar_payload(args, config, candidate, artifact))
+        sidecars.append(str(sidecar_path.resolve()))
+    return sidecars
+
+
 def run_retrying_request(args: argparse.Namespace, config: dict[str, Any], request_fn: Any, save_fn: Any) -> int:
     last_error: dict[str, Any] | None = None
     attempts = max(0, config["retries"]) + 1
@@ -2517,6 +2597,7 @@ def run_retrying_request(args: argparse.Namespace, config: dict[str, Any], reque
             else:
                 saved = save_result
                 artifacts = []
+            sidecars = write_generation_sidecars(args, config, saved, artifacts)
             summary = {
                 "ok": True,
                 "url": args._request_url,
@@ -2534,6 +2615,7 @@ def run_retrying_request(args: argparse.Namespace, config: dict[str, Any], reque
                 "selection_choice_alias": model_choice_alias(getattr(args, "choice", None)),
                 "attempt": attempt,
                 "saved": saved,
+                "sidecars": sidecars,
                 "artifacts": artifacts,
                 "raw_saved": str(Path(args.save_response).resolve()) if getattr(args, "save_response", None) else None,
             }
@@ -3890,6 +3972,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     generate.add_argument("--save-request", help="Save the redacted request payload for debugging.")
     generate.add_argument("--save-response")
     generate.add_argument("--save-error", default="output/imagegen/error.json")
+    generate.add_argument("--no-sidecar", action="store_true", help="Skip the automatic sidecar JSON record next to the output image.")
     generate.add_argument("--interactive", action="store_true", help="Resolve one model choice, then prompt for size, quality, format, and confirmation.")
     generate.add_argument("--dry-run", action="store_true")
 
@@ -3938,6 +4021,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     edit.add_argument("--save-request", help="Save the redacted multipart request summary for debugging.")
     edit.add_argument("--save-response")
     edit.add_argument("--save-error", default="output/imagegen/error.json")
+    edit.add_argument("--no-sidecar", action="store_true", help="Skip the automatic sidecar JSON record next to the output image.")
     edit.add_argument("--interactive", action="store_true", help="Resolve one model choice, then prompt for size, quality, format, and confirmation.")
     edit.add_argument("--dry-run", action="store_true")
 
@@ -3990,6 +4074,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     responses.add_argument("--save-request", help="Save the redacted Responses request payload for debugging.")
     responses.add_argument("--save-response")
     responses.add_argument("--save-error", default="output/imagegen/error.json")
+    responses.add_argument("--no-sidecar", action="store_true", help="Skip the automatic sidecar JSON record next to the output image.")
     responses.add_argument("--interactive", action="store_true", help="Resolve one model choice, then prompt for size, quality, format, and confirmation.")
     responses.add_argument("--dry-run", action="store_true")
 

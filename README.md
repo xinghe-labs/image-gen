@@ -1,16 +1,62 @@
 # image-generation-api
 
-Provider-aware image generation, editing, and Responses tooling for GPT Image and xAI/Grok Image through OpenAI-compatible or third-party gateways. Configure the API once, persist a deterministic numbered catalog, then select a model with one number. Only `gpt-image-*` and `grok-imagine-image*` enter the executable catalog or image requests.
+A prompt-to-image **agent skill**: you describe the picture you want, the agent polishes your idea into a structured prompt, confirms the plan once, and runs a provider-aware CLI to deliver the file. Under the hood it calls **GPT Image** and **xAI/Grok Image** models through any OpenAI-compatible or third-party gateway. Configure the API once, persist a deterministic numbered catalog, then select a model with one number. Only `gpt-image-*` and `grok-imagine-image*` enter the executable catalog or image requests.
 
-`IMAGE_GENERATION_*` is canonical. `GPT_IMAGE_*` and `OPENAI_*` remain compatible aliases. `gpt-image-2` stays in the built-in registry and remains explicitly selectable even when the current gateway does not list it.
+Works with any agent that reads the [Agent Skills](https://agentskills.io) format (Codex, Claude Code, ZCode, Cursor, ...).
 
-## Configure
+## How an agent uses it
+
+`SKILL.md` defines a four-step workflow the agent follows for every image request:
+
+1. **Polish** — the agent turns a casual request into a structured English prompt (subject, composition, style, lighting, quality) using [`references/prompt-craft.md`](references/prompt-craft.md), and picks model + preset.
+2. **Confirm** — one compact block: final prompt, model, parameters, output path. Skipped when you say "just generate".
+3. **Generate** — one CLI call. The image lands under a dated output path.
+4. **Deliver & iterate** — the agent reports the file and offers concrete next moves (variants, restyle, `edit` pass). Every successful generation writes a **sidecar record** next to the image, so any past image can be reproduced later.
+
+```
+You: 画一张雨夜便利店的图，要有那种孤独感
+Agent: polished prompt + plan (gpt-image-2 · quality · 1024x1024) → confirm?
+You: 可以
+Agent: saved output/imagegen/2026-09-19-convenience-store.png (+ .json sidecar)
+       want: 3 variants · warmer palette · low-angle composition?
+```
+
+## Installation
+
+### Skills CLI (recommended)
+
+Detects the agents installed on the machine and installs the skill where each one looks for it:
+
+```bash
+npx skills add xinghe-labs/image-generation-api                 # interactive: pick agents
+npx skills add xinghe-labs/image-generation-api -g --copy -y    # non-interactive: user-level, copy
+```
+
+### No-Node fallback
+
+From a clone or an extracted release archive, with Python 3.10+ (standard library only):
+
+```bash
+python install.py              # first detected skill root (~/.agents/skills, ~/.codex/skills, ~/.claude/skills)
+python install.py --root "<other-skill-root>"   # explicit target
+python install.py --all        # every detected skill root
+```
+
+The installer refuses to replace a foreign directory unless `--force` is passed. To update an install, `git pull` in the clone and re-run the command.
+
+### Run from a clone
+
+```bash
+git clone https://github.com/xinghe-labs/image-generation-api.git
+cd image-generation-api
+python scripts/image_generation_api.py --help
+```
+
+## Configuration
 
 ```dotenv
 IMAGE_GENERATION_API_KEY=your-third-party-key
 IMAGE_GENERATION_BASE_URL=https://your-provider.example/v1
-IMAGE_GENERATION_MODEL=gpt-image-2
-IMAGE_GENERATION_VENDOR=openai
 IMAGE_GENERATION_MODEL_CATALOG=~/.codex/image-generation-api-model-catalog.json
 IMAGE_GENERATION_RESPONSES_MODEL=gpt-5.4
 IMAGE_GENERATION_TOOL_MODEL=gpt-image-2
@@ -20,90 +66,75 @@ IMAGE_GENERATION_RETRY_DELAY=1
 IMAGE_GENERATION_USER_AGENT=gpt-image-client/1.0
 IMAGE_GENERATION_PROVIDER_PROFILE=auto
 IMAGE_GENERATION_ROUTING_MODE=auto
-IMAGE_GENERATION_TOOL_MODEL_POLICY=auto
 ```
 
-On Windows, user-level values under `HKCU\Environment` are read directly, so a new global value is available to already-running shells. The old `GPT_IMAGE_*` variables remain valid. Legacy model, vendor, provider-profile, and routing-mode preferences are retained only for diagnostics; they do not silently replace the no-choice `gpt-image-2` default. The catalog contains model metadata and numbers only; it never stores the API key.
+`base_url` must be an HTTP(S) URL ending in `/v1` — never a dashboard URL or root domain. `IMAGE_GENERATION_*` is canonical; `GPT_IMAGE_*` and `OPENAI_*` remain compatible aliases. On Windows, user-level values under `HKCU\Environment` are read directly, so a new global value is available to already-running shells. The catalog contains model metadata and numbers only; it never stores the API key.
 
-## Configure and Select
+## Model catalog and --choice
 
-```powershell
-python .\scripts\image_generation_api.py configure
-python .\scripts\image_generation_api.py select-model
-python .\scripts\image_generation_api.py select-model --choice 2
-python .\scripts\image_generation_api.py models --image-only
+```bash
+python scripts/image_generation_api.py configure     # one read-only GET /v1/models → numbered catalog
+python scripts/image_generation_api.py select-model  # print the persisted catalog (offline)
+python scripts/image_generation_api.py models --image-only  # live inventory, no generation
 ```
 
-Configuration and selection rules:
+- `configure` is the only command that refreshes the inventory; numbers stay stable until the next `configure`, and the catalog is bound to its Base URL.
+- `--choice N` resolves the same number in `generate`, `edit`, and `responses` without a network request.
+- Without `--choice`, the image model is always `gpt-image-2`, even when the gateway does not list it (legacy model environment variables do not override it).
+- Explicit `--model`/`--tool-model` remain compatibility overrides. Convenience aliases: `gpt2`, `gpt2.5`, `gpt4k`, `grok`, `grok2`, `grok-quality` — output always records the canonical provider id.
+- Alibaba/Qwen and other recognized vendors are reported by `models` as discovery-only and are never executable.
+- No automatic fallback or second model-selection prompt is ever performed.
 
-- `configure` makes exactly one read-only `GET /v1/models` call and writes the numbered catalog;
-- the catalog includes every currently executable GPT Image and Grok Image model, with all OpenAI entries first and all xAI/Grok entries second;
-- Alibaba/Qwen and other recognized vendors are reported by `models` as discovery-only and are never executable;
-- `--choice N` resolves the same number in `generate`, `edit`, and `responses` without a network request;
-- a number supplied with the request, or as the next standalone reply for a pending request, maps directly to `--choice N` without another vendor/model prompt;
-- numbers remain stable until the next explicit `configure`, and the catalog is bound to its Base URL;
-- without `--choice`, the image model is always `gpt-image-2` (legacy model environment variables do not override it);
-- explicit `--model`/`--tool-model` and explicit routing modes remain compatibility overrides;
-- no automatic fallback or second model-selection prompt is performed.
+## Commands
 
-`select-model` reads the local catalog only. `generate --dry-run` is also offline; neither command refreshes the provider inventory.
+```bash
+# Text-to-image (the default flow; --choice N selects a catalog model)
+python scripts/image_generation_api.py generate \
+  --prompt "A lone convenience store glowing on a rain-soaked street" \
+  --preset quality \
+  --output output/imagegen/2026-09-19-store.png
 
-Supported convenience aliases include `gpt2`, `gpt2.5`, `gpt4k`, `grok`, `grok2`, and `grok-quality`. They are never sent upstream as-is; output records both the input alias and the resolved provider id.
+# Reference-image edit (Grok takes 1-3 references; masks are GPT Image only)
+python scripts/image_generation_api.py edit \
+  --prompt "Replace the background with a clean studio scene" \
+  --image refs/product.png --mask refs/mask.png \
+  --choice 1 --output output/imagegen/edited.png
 
-`select-model` exposes one full `choices` array plus compact `recommended_choices` and `more_choices` number indexes. Each choice contains a stable number, vendor, model id, status, capabilities, and aliases. Proven models are recommended first; retired or unverified gateway aliases remain visible but are never silently selected.
-
-`models` is a read-only discovery call. Missing `gpt-image-2` is a warning when another image model exists; the local default and built-in capability are not removed.
-
-In `models` output, `image_model_count` counts every discovered image candidate, while `executable_image_model_count` and `vendor_count` cover only the enabled GPT/Grok execution set. `discovery_only_image_model_count` reports the remainder.
-
-Discovery reads nested/camelCase vendor and capability fields, ignores obvious video-only models and video tasks, and honors explicit negative image-capability flags.
-
-## Generate
-
-```powershell
-python .\scripts\image_generation_api.py generate `
-  --prompt "A clean product hero image" `
-  --preset quality `
-  --output ".\output\imagegen\hero.png" `
-  --dry-run
+# Responses flow: a text model drives the image_generation tool
+python scripts/image_generation_api.py responses \
+  --input-text "Create a campaign poster from this product" \
+  --input-image refs/product.png \
+  --model gpt-5.4 --tool-model gpt-image-2 \
+  --output output/imagegen/poster.png
 ```
 
-Use `--choice N` to select a configured model, or omit it for `gpt-image-2`. Use `--mode final`, `--mode transparent`, or another explicit mode when you want a deterministic route. Use `--save-request` to write a redacted payload for gateway support.
+Add `--dry-run` to inspect the exact request without sending it, and `--prompt-file` for long or multilingual prompts. Presets cover common shapes: `fast`, `standard`, `quality`, `square-2k`, `landscape-2k`, `portrait-2k`, `landscape-4k`, `portrait-4k`, `transparent`.
 
-## Edit
+## Sidecar records
 
-```powershell
-python .\scripts\image_generation_api.py edit `
-  --prompt "Replace the background with a clean studio scene" `
-  --image ".\refs\product.png" `
-  --mask ".\refs\mask.png" `
-  --choice 1 `
-  --preset quality `
-  --output ".\output\imagegen\edited.png" `
-  --dry-run
-```
+Every successful `generate`, `edit`, or `responses` call writes `<output>.json` next to the image — the exact prompt, model, catalog choice, parameters, byte size, and SHA-256 of the file. Months later you can answer "which prompt made this picture?" from the file alone, and rerun it verbatim. Pass `--no-sidecar` to opt out; records never contain credentials.
 
-Grok edits use JSON data URLs and one to three references; masks stay on `gpt-image-2`.
+## Provider boundary and safety
 
-## Responses
+- Never prints or stores the API key; reports show a masked tail only.
+- No automatic paid fallback across models or vendors; failures are surfaced, not rerouted.
+- Only `gpt-image-*` and `grok-imagine-image*` models execute; everything else is discovery-only, rejected locally before any image POST.
+- `configure`, `models`, `select-model`, and `--dry-run` never generate images.
+- `401`/`403` stop retries until credentials change; repeated `524`/`522`/`504` indicates an upstream timeout, not a bad model name.
+- Output normalization never silently crops, stretches, or pads a different aspect ratio.
 
-```powershell
-python .\scripts\image_generation_api.py responses `
-  --input-text "Create a campaign poster" `
-  --model gpt-5.4 `
-  --tool-model gpt-image-2 `
-  --preset quality `
-  --output ".\output\imagegen\poster.png" `
-  --dry-run
-```
-
-The top-level `--model` is text-capable; `--choice N` selects the image model inside the `image_generation` tool. If no choice is supplied, that tool uses `gpt-image-2`.
+See [`references/api-surface.md`](references/api-surface.md) for command contracts, [`references/provider-routing.md`](references/provider-routing.md) for model/provider rules, and [`references/errors.md`](references/errors.md) for structured error categories.
 
 ## Validation
 
-```powershell
-python <skill-creator-root>\scripts\quick_validate.py .
-python -m unittest discover -s .\tests -p "test_*.py"
+```bash
+python -m py_compile scripts/image_generation_api.py
+python -m unittest discover -s tests -p "test_*.py"
+python <skill-creator-root>/scripts/quick_validate.py .
 ```
 
-Model-list presence is discovery evidence only. This Skill deliberately refuses image calls for non-GPT/non-Grok models until a tested provider adapter is implemented. Private parameters, pricing, generation, editing, and quality still require provider documentation or an explicitly authorized smoke request.
+The test suite is fully offline and uses a local fake HTTP server; it never contacts paid image endpoints.
+
+## License
+
+[MIT](LICENSE)
