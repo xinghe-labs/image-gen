@@ -13,7 +13,9 @@ Prerequisites: `IMAGE_GENERATION_API_KEY` and `IMAGE_GENERATION_BASE_URL` (an HT
 
 ### Step 1 — Polish the prompt
 
-The user usually speaks in one casual sentence. A raw sentence wastes the model. Read [references/prompt-craft.md](./references/prompt-craft.md) and turn the request into a structured English prompt (subject, composition, style, lighting, quality). While polishing, also decide:
+If the user supplies a complete, detailed prompt, treat it as final: use it verbatim — no paraphrasing, reordering, or "improvement". Only the execution parameters (model, preset, size, output path) are yours to fill, and genuine conflicts (transparent background on Grok, sizes the model rejects) are surfaced as a question, never silently edited into the prompt. Mark such confirmations "verbatim".
+
+Otherwise the user speaks in one casual sentence, and a raw sentence wastes the model. Read [references/prompt-craft.md](./references/prompt-craft.md) and turn the request into a structured English prompt (subject, composition, style, lighting, quality). While polishing, also decide:
 
 - **Model**: default `gpt-image-2` when no preference exists. `--choice N` selects from the persisted catalog (`select-model` prints it, offline). Grok models are a valid pick when the user asks for Grok explicitly or wants its look.
 - **Preset**: pick from the table below based on use (cover → portrait-2k, banner → landscape-2k, quick draft → fast). Size flags override presets when the user names exact dimensions.
