@@ -1733,6 +1733,66 @@ class GptImageApiCliTest(unittest.TestCase):
         self.assertEqual(len([item for item in server.requests_seen if item["method"] == "GET"]), 0)
         self.assertEqual(len([item for item in server.requests_seen if item["method"] == "POST"]), 2)
 
+    def test_empty_200_body_retries_then_saves_image(self) -> None:
+        # 网关偶发空 200：解析失败必须按可重试处理，而不是直接抛 traceback。
+        response = {"data": [{"b64_json": ONE_PIXEL_PNG_B64}]}
+        with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(200, ""), (200, response)]) as server:
+            output_path = Path(tmpdir) / "empty-body.png"
+            result = self.run_cli(
+                "generate",
+                "--prompt",
+                "empty body retry",
+                "--base-url",
+                server.base_url,
+                "--api-key",
+                "provider-secret-6666",
+                "--output",
+                str(output_path),
+                "--size-policy",
+                "provider",
+                "--retries",
+                "1",
+                "--retry-delay",
+                "0",
+                cwd=tmpdir,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["attempt"], 2)
+            self.assertTrue(output_path.is_file())
+            self.assertEqual(len([item for item in server.requests_seen if item["method"] == "POST"]), 2)
+
+    def test_empty_200_body_exhausts_retries_with_structured_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(200, ""), (200, "")]) as server:
+            error_path = Path(tmpdir) / "empty-error.json"
+            result = self.run_cli(
+                "generate",
+                "--prompt",
+                "empty body exhausted",
+                "--base-url",
+                server.base_url,
+                "--api-key",
+                "provider-secret-7777",
+                "--output",
+                str(Path(tmpdir) / "out.png"),
+                "--retries",
+                "1",
+                "--retry-delay",
+                "0",
+                "--save-error",
+                str(error_path),
+                cwd=tmpdir,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn("Traceback", result.stderr)
+            saved_error = json.loads(error_path.read_text(encoding="utf-8"))
+            self.assertEqual(saved_error["category"], "gateway_unparseable_response")
+            self.assertTrue(saved_error["retryable"])
+            self.assertEqual(saved_error["attempt"], 2)
+            self.assertEqual(len([item for item in server.requests_seen if item["method"] == "POST"]), 2)
+
     def test_403_does_not_retry_and_saves_structured_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(403, {"error": {"message": "forbidden"}})]) as server:
             error_path = Path(tmpdir) / "error.json"

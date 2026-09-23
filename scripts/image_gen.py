@@ -1944,6 +1944,30 @@ def classify_error(status: int | None, body: str, reason: str = "") -> dict[str,
     }
 
 
+def unparseable_response_error(detail: str = "") -> dict[str, Any]:
+    """A reply whose body is not JSON (empty 200, HTML error page, truncated body).
+
+    Gateways occasionally answer with an empty 2xx body; the JSON parse then
+    fails before any HTTP status can be classified, so treat it as a transient
+    provider failure and let the normal retry budget absorb it.
+    """
+    return {
+        "status": None,
+        "category": "gateway_unparseable_response",
+        "retryable": True,
+        "summary": (
+            "The provider replied with a body that is not JSON (most often an empty 200), "
+            "so no image could be read. This is usually a transient gateway failure."
+        ),
+        "next_steps": [
+            "Retry with limited exponential backoff; the same request normally succeeds.",
+            "If it repeats, save the raw body with --save-response and check the gateway status.",
+            "Consider another provider route or gateway when empty 200s persist.",
+        ],
+        "body_excerpt": detail[:1000],
+    }
+
+
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -2645,6 +2669,16 @@ def run_retrying_request(args: argparse.Namespace, config: dict[str, Any], reque
             if getattr(args, "save_error", None):
                 write_json(Path(args.save_error), last_error)
             if not last_error["retryable"] or attempt == attempts:
+                print(json.dumps(last_error, ensure_ascii=False, indent=2), file=sys.stderr)
+                return 1
+        except json.JSONDecodeError as exc:
+            # 网关偶发空/非 JSON 响应（常见于空 200）：解析在拿到状态码之前就失败了，
+            # 按可重试的瞬时故障处理，吃满正常重试预算。
+            last_error = unparseable_response_error(str(exc))
+            last_error["attempt"] = attempt
+            if getattr(args, "save_error", None):
+                write_json(Path(args.save_error), last_error)
+            if attempt == attempts:
                 print(json.dumps(last_error, ensure_ascii=False, indent=2), file=sys.stderr)
                 return 1
         except error.URLError as exc:
