@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import http.client
 from io import BytesIO
 import json
 from math import gcd
@@ -23,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib import error, request
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
@@ -2361,6 +2362,25 @@ def decode_and_save_response_images(
     return save_image_byte_records(decoded, output, requested_size, size_policy)
 
 
+LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+
+
+def open_url(req: request.Request, timeout: int):
+    """按目标主机决定代理策略：回环地址（本地假网关、自建服务）永不走代理。
+
+    Windows 上 urllib 会读注册表里的系统代理——本机若挂着 127.0.0.1:10808 之类，
+    发往 127.0.0.1 的请求会被代理劫持（503 / 连接被重置），本地联调与测试全灭。
+    """
+    try:
+        host = (urlsplit(req.full_url).hostname or "").lower()
+    except ValueError:
+        host = ""
+    if host in LOOPBACK_HOSTS or host.endswith(".localhost"):
+        opener = request.build_opener(request.ProxyHandler({}))
+        return opener.open(req, timeout=timeout)
+    return request.urlopen(req, timeout=timeout)
+
+
 def post_json(
     url: str,
     api_key: str,
@@ -2380,7 +2400,7 @@ def post_json(
             "User-Agent": user_agent,
         },
     )
-    with request.urlopen(req, timeout=timeout) as response:
+    with open_url(req, timeout) as response:
         response_body = response.read().decode("utf-8")
         return json.loads(response_body)
 
@@ -2436,7 +2456,7 @@ def post_json_stream(
             "User-Agent": user_agent,
         },
     )
-    with request.urlopen(req, timeout=timeout) as response:
+    with open_url(req, timeout) as response:
         response_body = response.read().decode("utf-8", errors="replace")
         if "text/event-stream" not in response.headers.get("Content-Type", "").lower():
             return json.loads(response_body)
@@ -2485,7 +2505,7 @@ def post_multipart(
             "User-Agent": user_agent,
         },
     )
-    with request.urlopen(req, timeout=timeout) as response:
+    with open_url(req, timeout) as response:
         response_body = response.read().decode("utf-8")
         return json.loads(response_body)
 
@@ -2509,7 +2529,7 @@ def post_multipart_stream(
             "User-Agent": user_agent,
         },
     )
-    with request.urlopen(req, timeout=timeout) as response:
+    with open_url(req, timeout) as response:
         response_body = response.read().decode("utf-8", errors="replace")
         if "text/event-stream" not in response.headers.get("Content-Type", "").lower():
             return json.loads(response_body)
@@ -2526,7 +2546,7 @@ def get_json(url: str, api_key: str, timeout: int, user_agent: str = DEFAULT_USE
             "User-Agent": user_agent,
         },
     )
-    with request.urlopen(req, timeout=timeout) as response:
+    with open_url(req, timeout) as response:
         response_body = response.read().decode("utf-8")
         return {"status": response.status, "body": json.loads(response_body)}
 
@@ -2663,7 +2683,12 @@ def run_retrying_request(args: argparse.Namespace, config: dict[str, Any], reque
             print(json.dumps(last_error, ensure_ascii=False, indent=2), file=sys.stderr)
             return 1
         except error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
+            try:
+                body = exc.read().decode("utf-8", errors="replace")
+            except OSError:
+                # 错误响应体的读取也可能被掐断（Windows 上常见）：
+                # 保留状态码，正文按空处理，交给 classify_error 判定可重试性。
+                body = ""
             last_error = classify_error(exc.code, body, exc.reason)
             last_error["attempt"] = attempt
             if getattr(args, "save_error", None):
@@ -2681,8 +2706,12 @@ def run_retrying_request(args: argparse.Namespace, config: dict[str, Any], reque
             if attempt == attempts:
                 print(json.dumps(last_error, ensure_ascii=False, indent=2), file=sys.stderr)
                 return 1
-        except error.URLError as exc:
-            last_error = classify_error(None, "", str(exc.reason))
+        except (error.URLError, ConnectionError, TimeoutError, http.client.HTTPException) as exc:
+            # URLError 之外的这几类也是瞬时网络故障：网关掐断连接
+            # （RemoteDisconnected）、读响应中断（IncompleteRead）、超时等，
+            # 都按 network_error 重试，而不是直接把 traceback 抛出去。
+            reason = getattr(exc, "reason", None) or f"{type(exc).__name__}: {exc}"
+            last_error = classify_error(None, "", str(reason))
             last_error["attempt"] = attempt
             if getattr(args, "save_error", None):
                 write_json(Path(args.save_error), last_error)

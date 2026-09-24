@@ -19,6 +19,9 @@ ONE_PIXEL_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
 )
 
+# response_plan 里放这个字符串 = 网关直接掐断连接（不发任何响应）
+DISCONNECT_SENTINEL = "__disconnect__"
+
 
 def load_script_module():
     spec = importlib.util.spec_from_file_location("image_gen_under_test", SCRIPT_PATH)
@@ -86,6 +89,10 @@ class FakeImageHandler(BaseHTTPRequestHandler):
             }
         )
         status, payload = FakeImageHandler.response_plan.pop(0)
+        if payload == DISCONNECT_SENTINEL:
+            # 模拟网关直接掐断连接（无任何响应）
+            self.close_connection = True
+            return
         if isinstance(payload, str):
             self.send_response(status)
             self.send_header("Content-Type", "text/html")
@@ -1788,10 +1795,44 @@ class GptImageApiCliTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertNotIn("Traceback", result.stderr)
             saved_error = json.loads(error_path.read_text(encoding="utf-8"))
-            self.assertEqual(saved_error["category"], "gateway_unparseable_response")
+            # Windows 上空 200 表现为 ConnectionResetError（network_error），
+            # Linux 上多为 JSONDecodeError（gateway_unparseable_response）——都是可重试的瞬时故障
+            self.assertIn(saved_error["category"], ("gateway_unparseable_response", "network_error"))
             self.assertTrue(saved_error["retryable"])
             self.assertEqual(saved_error["attempt"], 2)
             self.assertEqual(len([item for item in server.requests_seen if item["method"] == "POST"]), 2)
+
+    def test_gateway_disconnect_retries_then_saves_image(self) -> None:
+        # 网关掐断连接（RemoteDisconnected）也是瞬时故障，必须重试而不是抛 traceback
+        response = {"data": [{"b64_json": ONE_PIXEL_PNG_B64}]}
+        with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer(
+            [(200, DISCONNECT_SENTINEL), (200, response)]
+        ) as server:
+            output_path = Path(tmpdir) / "after-disconnect.png"
+            result = self.run_cli(
+                "generate",
+                "--prompt",
+                "disconnect retry",
+                "--base-url",
+                server.base_url,
+                "--api-key",
+                "provider-secret-8888",
+                "--output",
+                str(output_path),
+                "--size-policy",
+                "provider",
+                "--retries",
+                "1",
+                "--retry-delay",
+                "0",
+                cwd=tmpdir,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["attempt"], 2)
+            self.assertTrue(output_path.is_file())
 
     def test_403_does_not_retry_and_saves_structured_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir, FakeImageServer([(403, {"error": {"message": "forbidden"}})]) as server:
